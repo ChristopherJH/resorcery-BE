@@ -69,12 +69,5 @@ values (1, 'Workflows'),
 (7, 'Node.js and Express'), 
 (8, 'SQL and persistence');
 
-insert into stages (stage_week, stage_description)
-values (1, 'Workflows'), 
-(2, 'TypeScript and code quality'), 
-(3, 'React, HTML and CSS'), 
-(4, 'React and event handlers'), 
-(5, 'React and useEffect'), 
-(7, 'Node.js and Express'), 
-(8, 'SQL and persistence');
-
+insert into users (name, is_faculty)
+values ('Neill', true), ('Martha', false), ('Chris', false), ('David', false);

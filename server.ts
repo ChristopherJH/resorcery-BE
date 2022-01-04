@@ -11,6 +11,7 @@ config(); //Read .env file lines as though they were env vars.
 //For the ssl property of the DB connection config, use a value of...
 // false - when connecting to a local DB
 // { rejectUnauthorized: false } - when connecting to a heroku DB
+
 const herokuSSLSetting = { rejectUnauthorized: false };
 const sslSetting = process.env.LOCAL ? false : herokuSSLSetting;
 const dbConfig = {
@@ -26,15 +27,101 @@ app.use(cors()); //add CORS support to each following route handler
 const client = new Client(dbConfig);
 client.connect();
 
-app.get("/", async (req, res) => {
-  const dbres = await client.query("select * from categories");
-  res.json(dbres.rows);
+//GET requests
+app.get("/recommendations", async (req, res) => {
+  try {
+    const dbres = await client.query("select * from recommendations");
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+app.get("/tags", async (req, res) => {
+  try {
+    const dbres = await client.query("select * from tags");
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+app.get("/comments", async (req, res) => {
+  try {
+    const dbres = await client.query("select * from comments");
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+app.get("/stages", async (req, res) => {
+  try {
+    const dbres = await client.query("select * from stages");
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+app.get("/users", async (req, res) => {
+  try {
+    const dbres = await client.query("select * from users");
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+//POST requests
+app.post("/recommendations", async (req, res) => {
+  const {
+    title,
+    author,
+    url,
+    description,
+    content,
+    recommended_description,
+    recommended,
+    stage_id,
+    user_id,
+  } = req.body;
+  try {
+    const dbres = await client.query(
+      `insert into recommendations (  title,
+    author,
+    url,
+    description,
+    content,
+    recommended_description,
+    recommended,
+    stage_id,
+    user_id) values($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *`,
+      [
+        title,
+        author,
+        url,
+        description,
+        content,
+        recommended_description,
+        recommended,
+        stage_id,
+        user_id,
+      ]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
 });
 
 //Start the server on the given port
-const port = process.env.PORT;
+let port = process.env.PORT;
 if (!port) {
-  throw "Missing PORT environment variable.  Set it in .env file.";
+  port = "4000";
 }
 app.listen(port, () => {
   console.log(`Server is up and running on port ${port}`);
