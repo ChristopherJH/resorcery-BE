@@ -73,6 +73,18 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.get("/study_list/:user_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "select * from study_list where user_id = $1",
+      [req.params.user_id]
+    );
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
 //POST requests
 app.post("/recommendations", async (req, res) => {
   const {
@@ -108,6 +120,116 @@ app.post("/recommendations", async (req, res) => {
         stage_id,
         user_id,
       ]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+app.post("/users", async (req, res) => {
+  const { name, is_faculty } = req.body;
+  try {
+    const dbres = await client.query(
+      "insert into users(name, is_faculty) values ($1, $2)",
+      [name, is_faculty]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+app.post("/comments/:recommendation_id", async (req, res) => {
+  const { body, user_id } = req.body;
+  try {
+    const dbres = await client.query(
+      "insert into comments(body, user_id, recommendation_id) values ($1, $2, $3) ",
+      [body, user_id, req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+app.post("/tags/:recommendation_id", async (req, res) => {
+  const { name } = req.body;
+  try {
+    const dbres = await client.query(
+      "insert into tags(name, recommendation_id) values ($1, $2) ",
+      [name, req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+app.post("/study_list/:user_id/:recommendation_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "insert into study_list(user_id, recommendation_id) values ($1, $2) ",
+      [req.params.user_id, req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+// Delete requests
+app.delete("/study_list/:user_id/:recommendation_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "delete from study_list where user_id = $1 and recommendation_id = $2",
+      [req.params.user_id, req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+//Put request
+app.put("/dislike/:recommendation_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "update recommendations set dislikes = dislikes + 1 where recommendation_id = $1",
+      [req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
+app.put("/like/:recommendation_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "update recommendations set likes = likes + 1 where recommendation_id = $1",
+      [req.params.recommendation_id]
     );
     res.status(201).json({
       status: "success",
