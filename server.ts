@@ -211,6 +211,21 @@ app.delete("/study_list/:user_id/:recommendation_id", async (req, res) => {
   }
 });
 
+app.delete("/recommendations/:recommendation_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "delete from recommendations where recommendation_id = $1",
+      [req.params.recommendation_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
 //Put request
 app.put("/dislike/:recommendation_id", async (req, res) => {
   try {
