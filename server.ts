@@ -30,7 +30,9 @@ client.connect();
 //GET requests
 app.get("/recommendations", async (req, res) => {
   try {
-    const dbres = await client.query("select * from recommendations");
+    const dbres = await client.query(
+      "select * from recommendations order by time desc"
+    );
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
     res.status(404).json({ status: "failed", error: err });
