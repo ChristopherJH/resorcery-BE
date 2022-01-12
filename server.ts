@@ -87,6 +87,30 @@ app.get("/study_list/:user_id", async (req, res) => {
   }
 });
 
+app.get("/:recommendation_id/likes", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "SELECT COUNT(*) FROM comments c inner join recommendations rec on (rec.recommendation_id = c.recommendation_id) WHERE rec.recommendation_id = $1 and is_like = true",
+      [req.params.recommendation_id]
+    );
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
+app.get("/:recommendation_id/dislikes", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "SELECT COUNT(*) FROM comments c inner join recommendations rec on (rec.recommendation_id = c.recommendation_id) WHERE rec.recommendation_id = $1 and is_dislike = true",
+      [req.params.recommendation_id]
+    );
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
 //POST requests
 app.post("/recommendations", async (req, res) => {
   const {
@@ -149,11 +173,18 @@ app.post("/users", async (req, res) => {
 });
 
 app.post("/comments/:recommendation_id", async (req, res) => {
-  const { body, user_id } = req.body;
+  console.log("Post comment request received");
+  let { body, user_id, is_like, is_dislike } = req.body;
+  if (!is_like) {
+    is_like = false;
+  }
+  if (!is_dislike) {
+    is_dislike = false;
+  }
   try {
     const dbres = await client.query(
-      "insert into comments(body, user_id, recommendation_id) values ($1, $2, $3) ",
-      [body, user_id, req.params.recommendation_id]
+      "insert into comments(body, user_id, recommendation_id, is_like, is_dislike) values ($1, $2, $3, $4, $5) ",
+      [body, user_id, req.params.recommendation_id, is_like, is_dislike]
     );
     res.status(201).json({
       status: "success",
@@ -215,37 +246,6 @@ app.delete("/recommendations/:recommendation_id", async (req, res) => {
   try {
     const dbres = await client.query(
       "delete from recommendations where recommendation_id = $1",
-      [req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-//Put request
-app.put("/dislike/:recommendation_id", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "update recommendations set dislikes = dislikes + 1 where recommendation_id = $1",
-      [req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-app.put("/like/:recommendation_id", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "update recommendations set likes = likes + 1 where recommendation_id = $1",
       [req.params.recommendation_id]
     );
     res.status(201).json({
