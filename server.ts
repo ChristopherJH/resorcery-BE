@@ -245,6 +245,21 @@ app.delete("/study_list/:user_id/:recommendation_id", async (req, res) => {
   }
 });
 
+app.delete("/:recommendation_id/comments/:comment_id", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "delete from comments where recommendation_id=$1 AND comment_id = $2",
+      [req.params.recommendation_id, req.params.comment_id]
+    );
+    res.status(201).json({
+      status: "success",
+      data: dbres.rows[0],
+    });
+  } catch (err) {
+    res.status(400).json({ status: "failed", error: err });
+  }
+});
+
 app.delete("/recommendations/:recommendation_id", async (req, res) => {
   try {
     await client.query(`DELETE FROM tags WHERE recommendation_id = $1;`, [
