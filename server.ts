@@ -51,7 +51,7 @@ app.get("/tags", async (req, res) => {
 app.get("/comments/:recommendation_id", async (req, res) => {
   try {
     const dbres = await client.query(
-      "SELECT c.comment_id, c.date, c.body, c.user_id, u.name, u.is_faculty, c.recommendation_id, c.is_like, c.is_dislike FROM comments c JOIN users u ON c.user_id = u.user_id WHERE recommendation_id = $1",
+      "SELECT c.comment_id, c.date, c.body, c.user_id, u.name, u.is_faculty, c.recommendation_id, c.is_like, c.is_dislike FROM comments c JOIN users u ON c.user_id = u.user_id WHERE recommendation_id = $1 order by c.date desc",
       [req.params.recommendation_id]
     );
     res.status(200).json({ status: "success", data: dbres.rows });
