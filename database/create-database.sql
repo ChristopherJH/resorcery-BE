@@ -1,11 +1,19 @@
+
+
+drop table study_list;
+drop table comments;
+drop table tags;
+
+drop table recommendations;
 drop table users;
+drop table stages;
+
+
 
 create table users (
 user_id serial PRIMARY KEY,
 name text CHECK (LENGTH(name) > 0 ) unique,
 is_faculty boolean);
-
-drop table stages;
  
 create table stages (
 stage_id serial PRIMARY KEY,
@@ -13,7 +21,6 @@ stage_week int NOT NULL,
 stage_description text NOT NULL
 );
 
-drop table recommendations;
 
 create table recommendations (
 recommendation_id serial PRIMARY KEY,
@@ -33,7 +40,6 @@ FOREIGN KEY(stage_id)
 REFERENCES stages(stage_id)
  );
  
-drop table study_list;
 
 create table study_list (
   user_id int,
@@ -41,10 +47,9 @@ create table study_list (
   FOREIGN KEY(user_id)
   REFERENCES users (user_id),
   FOREIGN KEY(recommendation_id)
-  REFERENCES recommendations (recommendation_id)
+  REFERENCES recommendations (recommendation_id) ON DELETE CASCADE
 );
 
-drop table comments;
 
 create table comments (
   comment_id serial PRIMARY KEY,
@@ -55,20 +60,19 @@ create table comments (
   is_like boolean default false,
   is_dislike boolean default false,
   FOREIGN KEY(recommendation_id)
-  REFERENCES recommendations (recommendation_id),
+  REFERENCES recommendations (recommendation_id) ON DELETE CASCADE,
   FOREIGN KEY(user_id)
   REFERENCES users (user_id)
 );
 
 
-drop table tags;
 
 create table tags (
 tag_id serial PRIMARY KEY,
 name text CHECK (LENGTH(name) > 0 ),
 recommendation_id int,
 FOREIGN KEY(recommendation_id)
-  REFERENCES recommendations (recommendation_id)
+  REFERENCES recommendations (recommendation_id) ON DELETE CASCADE
 );
 
 insert into stages (stage_week, stage_description)
