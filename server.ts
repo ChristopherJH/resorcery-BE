@@ -276,6 +276,19 @@ app.delete("/recommendations/:recommendation_id", async (req, res) => {
   }
 });
 
+app.delete("/recommendations", async (req, res) => {
+  try {
+    await client.query(`DELETE FROM recommendations returning *;`);
+    res.status(201).json({
+      status: "success",
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: "failed",
+    });
+  }
+});
+
 //Start the server on the given port
 let port = process.env.PORT;
 if (!port) {
