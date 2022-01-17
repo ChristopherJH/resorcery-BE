@@ -262,15 +262,6 @@ app.delete("/:recommendation_id/comments/:comment_id", async (req, res) => {
 
 app.delete("/recommendations/:recommendation_id", async (req, res) => {
   try {
-    await client.query(`DELETE FROM tags WHERE recommendation_id = $1;`, [
-      req.params.recommendation_id,
-    ]);
-    await client.query(`DELETE FROM comments WHERE recommendation_id = $1;`, [
-      req.params.recommendation_id,
-    ]);
-    await client.query(`DELETE FROM study_list WHERE recommendation_id = $1;`, [
-      req.params.recommendation_id,
-    ]);
     await client.query(
       `DELETE FROM recommendations WHERE recommendation_id = $1 returning *;`,
       [req.params.recommendation_id]
