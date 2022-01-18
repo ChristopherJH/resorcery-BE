@@ -90,30 +90,6 @@ app.get("/study_list/:user_id", async (req, res) => {
   }
 });
 
-app.get("/:recommendation_id/likes", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "SELECT COUNT(*) FROM comments c inner join recommendations rec on (rec.recommendation_id = c.recommendation_id) WHERE rec.recommendation_id = $1 and is_like = true",
-      [req.params.recommendation_id]
-    );
-    res.status(200).json({ status: "success", data: dbres.rows });
-  } catch (err) {
-    res.status(404).json({ status: "failed", error: err });
-  }
-});
-
-app.get("/:recommendation_id/dislikes", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "SELECT COUNT(*) FROM comments c inner join recommendations rec on (rec.recommendation_id = c.recommendation_id) WHERE rec.recommendation_id = $1 and is_dislike = true",
-      [req.params.recommendation_id]
-    );
-    res.status(200).json({ status: "success", data: dbres.rows });
-  } catch (err) {
-    res.status(404).json({ status: "failed", error: err });
-  }
-});
-
 //POST requests
 app.post("/recommendations", async (req, res) => {
   const {
