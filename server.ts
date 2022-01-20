@@ -136,6 +136,7 @@ app.post("/recommendations", async (req, res) => {
 });
 
 app.post("/users", async (req, res) => {
+  console.log("Post user request received");
   const { name, is_faculty } = req.body;
   try {
     const dbres = await client.query(
@@ -242,6 +243,21 @@ app.delete("/recommendations/:recommendation_id", async (req, res) => {
       `DELETE FROM recommendations WHERE recommendation_id = $1 returning *;`,
       [req.params.recommendation_id]
     );
+    res.status(201).json({
+      status: "success",
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: "failed",
+    });
+  }
+});
+
+app.delete("/users/:user_id", async (req, res) => {
+  try {
+    await client.query(`DELETE FROM users WHERE user_id = $1 returning *;`, [
+      req.params.user_id,
+    ]);
     res.status(201).json({
       status: "success",
     });
