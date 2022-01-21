@@ -282,6 +282,21 @@ app.delete("/users/:user_id", async (req, res) => {
   }
 });
 
+app.delete("/users/name/:name", async (req, res) => {
+  try {
+    await client.query(`DELETE FROM users WHERE name = $1 returning *;`, [
+      req.params.name,
+    ]);
+    res.status(201).json({
+      status: "success",
+    });
+  } catch (err) {
+    res.status(404).json({
+      status: "failed",
+    });
+  }
+});
+
 app.delete("/recommendations", async (req, res) => {
   try {
     await client.query(`DELETE FROM recommendations returning *;`);
