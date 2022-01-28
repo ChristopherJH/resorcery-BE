@@ -1,4 +1,4 @@
-import { Client } from "pg";
+import { Client, QueryResult } from "pg";
 import { config } from "dotenv";
 import express from "express";
 import cors from "cors";
@@ -133,7 +133,7 @@ app.post("/:workout_id/sets", async (req, res) => {
   const setsArray: SetType[] = data;
   // Format the string to be put in our query
   try {
-    let dbres = { rows: [] };
+    let dbres: QueryResult<any>;
     setsArray.forEach(async (set) => {
       dbres = await client.query(
         "insert into sets (workout_id, name, weight, reps) values ($1, $2, $3, $4) returning *",
@@ -142,7 +142,7 @@ app.post("/:workout_id/sets", async (req, res) => {
     });
     res.status(201).json({
       status: "success",
-      data: dbres.rows[0],
+      data: dbres ? dbres.rows[0] : "no data",
     });
   } catch (err) {
     res.status(400).json({ status: "failed", error: err });
