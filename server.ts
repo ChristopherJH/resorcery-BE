@@ -28,10 +28,10 @@ const client = new Client(dbConfig);
 client.connect();
 
 //GET requests
-app.get("/recommendations", async (req, res) => {
+app.get("/workouts", async (req, res) => {
   try {
     const dbres = await client.query(
-      "select * from recommendations order by time desc"
+      "SELECT w.workout_id, title, day, duration_mins, notes, date, SUM(weight*reps) AS weight_lifted, COUNT(DISTINCT name) as exercises FROM workouts w JOIN sets s ON w.workout_id = s.workout_id GROUP BY w.workout_id ORDER BY w.date DESC"
     );
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
@@ -39,20 +39,19 @@ app.get("/recommendations", async (req, res) => {
   }
 });
 
-app.get("/tags", async (req, res) => {
+app.get("/sets", async (req, res) => {
   try {
-    const dbres = await client.query("select * from tags");
+    const dbres = await client.query("select * from sets");
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
     res.status(404).json({ status: "failed", error: err });
   }
 });
 
-app.get("/comments/:recommendation_id", async (req, res) => {
+app.get("/sets/best", async (req, res) => {
   try {
     const dbres = await client.query(
-      "SELECT c.comment_id, c.date, c.body, c.user_id, u.name, u.is_faculty, c.recommendation_id, c.is_like, c.is_dislike FROM comments c JOIN users u ON c.user_id = u.user_id WHERE recommendation_id = $1 order by c.date desc",
-      [req.params.recommendation_id]
+      "select workout_id, name, MAX(weight) as weight, MAX(reps) as reps from sets group by workout_id, name order by workout_id asc"
     );
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
@@ -60,29 +59,20 @@ app.get("/comments/:recommendation_id", async (req, res) => {
   }
 });
 
-app.get("/stages", async (req, res) => {
+//GET stats requests
+app.get("/totalweight", async (req, res) => {
   try {
-    const dbres = await client.query("select * from stages");
+    const dbres = await client.query("SELECT SUM(weight*reps) FROM sets");
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
     res.status(404).json({ status: "failed", error: err });
   }
 });
 
-app.get("/users", async (req, res) => {
-  try {
-    const dbres = await client.query("select * from users");
-    res.status(200).json({ status: "success", data: dbres.rows });
-  } catch (err) {
-    res.status(404).json({ status: "failed", error: err });
-  }
-});
-
-app.get("/study_list/:user_id", async (req, res) => {
+app.get("/workouts/week", async (req, res) => {
   try {
     const dbres = await client.query(
-      "select * from study_list where user_id = $1",
-      [req.params.user_id]
+      "SELECT * FROM (SELECT EXTRACT(YEAR FROM date) as yr, EXTRACT(WEEK FROM date) as week, COUNT(*) AS num FROM workouts GROUP BY yr, week LIMIT 8) w ORDER BY yr"
     );
     res.status(200).json({ status: "success", data: dbres.rows });
   } catch (err) {
@@ -91,40 +81,16 @@ app.get("/study_list/:user_id", async (req, res) => {
 });
 
 //POST requests
-app.post("/recommendations", async (req, res) => {
-  const {
-    title,
-    author,
-    url,
-    description,
-    content,
-    recommended_description,
-    recommended,
-    stage_id,
-    user_id,
-  } = req.body;
+app.post("/workout", async (req, res) => {
+  const { title, day, duration_mins, notes, date } = req.body;
   try {
     const dbres = await client.query(
-      `insert into recommendations (  title,
-    author,
-    url,
-    description,
-    content,
-    recommended_description,
-    recommended,
-    stage_id,
-    user_id) values($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *`,
-      [
+      `insert into workouts (
         title,
-        author,
-        url,
-        description,
-        content,
-        recommended_description,
-        recommended,
-        stage_id,
-        user_id,
-      ]
+        day,
+        duration_mins,
+        notes, date) values($1, $2, $3, $4, $5) returning *`,
+      [title, day, duration_mins, notes, date]
     );
     res.status(201).json({
       status: "success",
@@ -135,13 +101,16 @@ app.post("/recommendations", async (req, res) => {
   }
 });
 
-app.post("/users", async (req, res) => {
-  console.log("Post user request received");
-  const { name, is_faculty } = req.body;
+// Add one set to a workout
+app.post("/:workout_id/set", async (req, res) => {
+  const { name, weight, reps } = req.body;
   try {
     const dbres = await client.query(
-      "insert into users(name, is_faculty) values ($1, $2)",
-      [name, is_faculty]
+      `insert into sets ( workout_id, 
+        name,
+        weight,
+        reps) values($1, $2, $3, $4) returning *`,
+      [req.params.workout_id, name, weight, reps]
     );
     res.status(201).json({
       status: "success",
@@ -152,161 +121,31 @@ app.post("/users", async (req, res) => {
   }
 });
 
-app.post("/comments/:recommendation_id", async (req, res) => {
-  console.log("Post comment request received");
-  let { body, user_id, is_like, is_dislike } = req.body;
-  if (!is_like) {
-    is_like = false;
-  }
-  if (!is_dislike) {
-    is_dislike = false;
-  }
+interface SetType {
+  name: string;
+  weight: number;
+  reps: number;
+}
+
+// Add multiple sets to a workout
+app.post("/:workout_id/sets", async (req, res) => {
+  const { data } = req.body;
+  const setsArray: SetType[] = data;
+  // Format the string to be put in our query
   try {
-    const dbres = await client.query(
-      "insert into comments(body, user_id, recommendation_id, is_like, is_dislike) values ($1, $2, $3, $4, $5) ",
-      [body, user_id, req.params.recommendation_id, is_like, is_dislike]
-    );
+    let dbres = { rows: [] };
+    setsArray.forEach(async (set) => {
+      dbres = await client.query(
+        "insert into sets (workout_id, name, weight, reps) values ($1, $2, $3, $4) returning *",
+        [req.params.workout_id, set.name, set.weight, set.reps]
+      );
+    });
     res.status(201).json({
       status: "success",
       data: dbres.rows[0],
     });
   } catch (err) {
     res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-app.post("/tags/:recommendation_id", async (req, res) => {
-  const { name } = req.body;
-  try {
-    const dbres = await client.query(
-      "insert into tags(name, recommendation_id) values ($1, $2) ",
-      [name, req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-app.post("/study_list/:user_id/:recommendation_id", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "insert into study_list(user_id, recommendation_id) values ($1, $2) ",
-      [req.params.user_id, req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-// Delete requests
-app.delete("/study_list/:user_id/:recommendation_id", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "delete from study_list where user_id = $1 and recommendation_id = $2",
-      [req.params.user_id, req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-// Delete all comments
-app.delete("/comments", async (req, res) => {
-  console.log("Delete all comments request received");
-  try {
-    const dbres = await client.query("delete from comments returning *");
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-app.delete("/:recommendation_id/comments/:comment_id", async (req, res) => {
-  try {
-    const dbres = await client.query(
-      "delete from comments where recommendation_id=$1 AND comment_id = $2",
-      [req.params.recommendation_id, req.params.comment_id]
-    );
-    res.status(201).json({
-      status: "success",
-      data: dbres.rows[0],
-    });
-  } catch (err) {
-    res.status(400).json({ status: "failed", error: err });
-  }
-});
-
-app.delete("/recommendations/:recommendation_id", async (req, res) => {
-  try {
-    await client.query(
-      `DELETE FROM recommendations WHERE recommendation_id = $1 returning *;`,
-      [req.params.recommendation_id]
-    );
-    res.status(201).json({
-      status: "success",
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: "failed",
-    });
-  }
-});
-
-app.delete("/users/:user_id", async (req, res) => {
-  try {
-    await client.query(`DELETE FROM users WHERE user_id = $1 returning *;`, [
-      req.params.user_id,
-    ]);
-    res.status(201).json({
-      status: "success",
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: "failed",
-    });
-  }
-});
-
-app.delete("/users/name/:name", async (req, res) => {
-  try {
-    await client.query(`DELETE FROM users WHERE name = $1 returning *;`, [
-      req.params.name,
-    ]);
-    res.status(201).json({
-      status: "success",
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: "failed",
-    });
-  }
-});
-
-app.delete("/recommendations", async (req, res) => {
-  try {
-    await client.query(`DELETE FROM recommendations returning *;`);
-    res.status(201).json({
-      status: "success",
-    });
-  } catch (err) {
-    res.status(404).json({
-      status: "failed",
-    });
   }
 });
 
