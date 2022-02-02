@@ -80,6 +80,17 @@ app.get("/workouts/week", async (req, res) => {
   }
 });
 
+app.get("/sets/best/dates", async (req, res) => {
+  try {
+    const dbres = await client.query(
+      "select s.workout_id, name, MAX(weight) as weight, MAX(reps) as reps, date from sets s JOIN workouts w ON s.workout_id = w.workout_id group by s.workout_id, date, name order by date asc"
+    );
+    res.status(200).json({ status: "success", data: dbres.rows });
+  } catch (err) {
+    res.status(404).json({ status: "failed", error: err });
+  }
+});
+
 //POST requests
 app.post("/workout", async (req, res) => {
   const { title, day, duration_mins, notes, date } = req.body;
